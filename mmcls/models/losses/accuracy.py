@@ -4,6 +4,8 @@ from numbers import Number
 import numpy as np
 import torch
 import torch.nn as nn
+from math import sqrt
+from scipy.special import ndtri
 
 
 def accuracy_numpy(pred, target, topk=(1, ), thrs=0.):
@@ -42,6 +44,27 @@ def accuracy_numpy(pred, target, topk=(1, ), thrs=0.):
             res.append(res_thr)
     return res
 
+def _proportion_confidence_interval(r, n, z):
+    """Compute confidence interval for a proportion.
+    
+    Follows notation described on pages 46--47 of [1]. 
+    
+    References
+    ----------
+    [1] R. G. Newcombe and D. G. Altman, Proportions and their differences, in Statisics
+    with Confidence: Confidence intervals and statisctical guidelines, 2nd Ed., D. G. Altman, 
+    D. Machin, T. N. Bryant and M. J. Gardner (Eds.), pp. 45-57, BMJ Books, 2000. 
+    """
+#    print('r:',r)
+#    print('n:',n)
+    A = 2*r + z**2
+    B = z*sqrt(z**2 + 4*r*(1 - r/n))
+    C = 2*(n + z**2)
+    l = (A-B)/C
+    h = (A+B)/C
+#    print('l: ',l)
+#    print('h: ',h)
+    return np.array((l,h))
 
 def accuracy_torch(pred, target, topk=(1, ), thrs=0.):
     if isinstance(thrs, Number):
@@ -56,7 +79,8 @@ def accuracy_torch(pred, target, topk=(1, ), thrs=0.):
     res = []
     maxk = max(topk)
     num = pred.size(0)
-    pred_score, pred_label = pred.topk(maxk, dim=1)
+#    print(pred.topk(maxk, dim=1))
+    pred_score, pred_label = pred.topk(1, dim=1)
     pred_label = pred_label.t()
     correct = pred_label.eq(target.view(1, -1).expand_as(pred_label))
     for k in topk:
@@ -65,11 +89,19 @@ def accuracy_torch(pred, target, topk=(1, ), thrs=0.):
             # Only prediction values larger than thr are counted as correct
             _correct = correct & (pred_score.t() > thr)
             correct_k = _correct[:k].reshape(-1).float().sum(0, keepdim=True)
+            print(correct_k[0])
+            print(num)
+            alpha = 0.95
+            z = -ndtri((1.0-alpha)/2)
+            accuracy_CI = _proportion_confidence_interval(float(correct_k[0]),float(num) ,z)
+            print('res_thr: ',res_thr)
+            print('accuracy_CI : ',accuracy_CI)
             res_thr.append((correct_k.mul_(100. / num)))
         if res_single:
             res.append(res_thr[0])
         else:
             res.append(res_thr)
+        print(res_thr)
     return res
 
 

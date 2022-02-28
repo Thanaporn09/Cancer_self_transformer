@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 import mmcv
 import numpy as np
@@ -9,8 +10,7 @@ from torch.utils.data import Dataset
 from mmcls.core.evaluation import precision_recall_f1, support
 from mmcls.models.losses import accuracy
 from .pipelines import Compose
-from sklearn.metrics import roc_auc_score, roc_curve, auc
-import matplotlib.pyplot as plt
+
 
 class BaseDataset(Dataset, metaclass=ABCMeta):
     """Base dataset.
@@ -34,7 +34,6 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                  ann_file=None,
                  test_mode=False):
         super(BaseDataset, self).__init__()
-
         self.ann_file = ann_file
         self.data_prefix = data_prefix
         self.test_mode = test_mode
@@ -66,17 +65,17 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         gt_labels = np.array([data['gt_label'] for data in self.data_infos])
         return gt_labels
 
-    def get_cat_ids(self, idx):
+    def get_cat_ids(self, idx: int) -> List[int]:
         """Get category id by index.
 
         Args:
             idx (int): Index of data.
 
         Returns:
-            int: Image category of specified index.
+            cat_ids (List[int]): Image category of specified index.
         """
 
-        return self.data_infos[idx]['gt_label'].astype(np.int)
+        return [int(self.data_infos[idx]['gt_label'])]
 
     def prepare_data(self, idx):
         results = copy.deepcopy(self.data_infos[idx])
@@ -141,9 +140,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         else:
             metrics = metric
         allowed_metrics = [
-            'accuracy', 'precision', 'recall', 'f1_score', 'support', 'specificity',
-            'recall_CI','specificity_CI']#,'ROC_AUC'
-#        ]
+            'accuracy', 'precision', 'recall', 'f1_score', 'support'
+        ]
         eval_results = {}
         results = np.vstack(results)
         gt_labels = self.get_gt_labels()
@@ -186,26 +184,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             support_value = support(
                 results, gt_labels, average_mode=average_mode)
             eval_results['support'] = support_value
-#        if 'ROC_AUC' in metrics:
-#            pred_label = np.argsort(results, axis=1)[:, -1]
-#            print(pred_label.shape)
-#            false_positive_rate, true_positive_rate, thresholds = roc_curve(pred_label,gt_labels)
-#            roc_auc = auc(false_positive_rate, true_positive_rate)
-#            eval_results['ROC_AUC'] = roc_auc
-#            #plot ROC curve binary
-#            plt.figure()
-#            plt.plot(false_positive_rate,true_positive_rate,color='darkorange',lw=2,label='ROC curve(area = %0.4f)'%roc_auc)
-#            plt.plot([0,1],[0,1],color='navy',lw=2,linestyle='--')
-#            plt.xlim([0.0,1.0])
-#            plt.ylim([0.0,1.05])
-#            plt.xlabel('False Positive Rate')
-#            plt.ylabel('True Positive Rate')
-#            plt.title('Receiver operating characteristic')
-#            plt.legend(loc="lower right")
-##            plt.show()
-#            plt.savefig('/data/Transformer/mmclassification/ROC_AUC/ROC_AUC.png')
 
-        precision_recall_f1_keys = ['precision', 'recall', 'f1_score','specificity','recall_CI','specificity_CI']
+        precision_recall_f1_keys = ['precision', 'recall', 'f1_score']
         if len(set(metrics) & set(precision_recall_f1_keys)) != 0:
             if thrs is not None:
                 precision_recall_f1_values = precision_recall_f1(

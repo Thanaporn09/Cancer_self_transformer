@@ -367,7 +367,7 @@ class VisionTransformer(BaseBackbone):
                 patch_token = patch_token.permute(0, 3, 1, 2)
                 cls_token = x[:, 0]
                 if self.output_cls_token:
-                    out = [patch_token, cls_token]
+                    out = cls_token #[patch_token, cls_token]
                 else:
                     out = patch_token
                 outs.append(out)

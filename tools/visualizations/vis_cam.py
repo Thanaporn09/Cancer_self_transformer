@@ -141,6 +141,7 @@ def build_reshape_transform(model, args):
         assert len(tensor.size()) == 3, \
             (f"The input feature's shape is {tensor.size()}, "
              'and the feature seems not from a vit-like network?')
+#        print(num_extra_tokens)
         tensor = tensor[:, num_extra_tokens:, :]
         # get heat_map_height and heat_map_width, preset input is a square
         heat_map_area = tensor.size()[1]
@@ -258,6 +259,7 @@ def show_cam_grad(grayscale_cam, src_img, title, out_path=None):
 
     if out_path:
         mmcv.imwrite(visualization_img, str(out_path))
+        mmcv.imshow(visualization_img, win_name=title)
     else:
         mmcv.imshow(visualization_img, win_name=title)
 
@@ -286,8 +288,9 @@ def get_default_traget_layers(model, args):
         elif hasattr(model.backbone, 'num_extra_tokens'):
             num_extra_tokens = model.backbone.num_extra_tokens
         else:
-            raise AttributeError('Please set num_extra_tokens in backbone'
-                                 " or using 'num-extra-tokens'")
+            num_extra_tokens = 0
+#            raise AttributeError('Please set num_extra_tokens in backbone'
+#                                 " or using 'num-extra-tokens'")
 
         # if a vit-like backbone's num_extra_tokens bigger than 0, view it
         # as a VisionTransformer backbone, eg. DeiT, T2T-ViT.
